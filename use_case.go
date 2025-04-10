@@ -31,7 +31,7 @@ func (uc *UseCase) SignIn(ctx context.Context, input *SignInput) (*SignInOutput,
 	claims := jwt.StandardClaims{
 		ExpiresAt: input.ExpiresAt,
 		Issuer:    uc.jwtIssuer,
-		Id:        userKey.ID,
+		Audience:  userKey.ID,
 		Subject:   userKey.Address,
 		IssuedAt:  time.Now().Unix(),
 	}
@@ -40,7 +40,7 @@ func (uc *UseCase) SignIn(ctx context.Context, input *SignInput) (*SignInOutput,
 	if err != nil {
 		return nil, err
 	}
-	return &SignInOutput{token: token}, nil
+	return &SignInOutput{Token: token}, nil
 }
 
 func (uc *UseCase) GetUserKeyFromToken(ctx context.Context, token string) (*UserKey, error) {
@@ -53,24 +53,20 @@ func (uc *UseCase) GetUserKeyFromToken(ctx context.Context, token string) (*User
 	if err != nil {
 		return nil, err
 	}
-	claims, ok := tokenObj.Claims.(jwt.StandardClaims)
+	claims, ok := tokenObj.Claims.(jwt.MapClaims)
 	if !ok {
 		return nil, fmt.Errorf("invalid token")
 	}
-	if claims.Issuer != uc.jwtIssuer {
+	if claims["iss"] != uc.jwtIssuer {
 		return nil, fmt.Errorf("invalid token")
 	}
 
-	userKey, err := uc.repository.GetUserKey(ctx, claims.Id)
+	userKey, err := uc.repository.GetUserKey(ctx, claims["aud"].(string))
 	if err != nil {
 		return nil, err
 	}
 
 	return userKey, nil
-}
-
-func (uc *UseCase) GetAllAssociatedUserKeys(ctx context.Context, key *UserKey) ([]*UserKey, error) {
-	return uc.repository.GetUserKeys(ctx, key.Address)
 }
 
 func (uc *UseCase) RevokeUserKey(ctx context.Context, currentUserKey *UserKey, key string) error {

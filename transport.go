@@ -27,16 +27,6 @@ func (t *Transport) RevokeUserKey(w http.ResponseWriter, r *http.Request) {
 	gohttplib.WriteJsonOrError(w, map[string]int{"ok": 1}, http.StatusOK, err)
 }
 
-func (t *Transport) GetUserKeys(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	userKey := GetUserKeyFromRequestForced(r)
-	keys, err := t.useCase.GetAllAssociatedUserKeys(r.Context(), userKey)
-	gohttplib.WriteJsonOrError(w, keys, http.StatusOK, err)
-}
-
 func (t *Transport) SignIn(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

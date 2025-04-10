@@ -12,17 +12,17 @@ type UserKey struct {
 
 func (u *UserKey) isExpired() bool {
 	now := time.Now().Unix()
-	return u.ExpiresAtSecs > now
+	return u.ExpiresAtSecs < now
 }
 
 type SignInput struct {
-	IdToken   string
-	PublicKey string
-	Blinder   string
-	ExpiresAt int64
-	UidKey    string
+	IdToken   string `json:"jwt_b64"`
+	PublicKey string `json:"epk"`
+	Blinder   string `json:"epk_blinder"`
+	ExpiresAt int64  `json:"exp_date_secs"`
+	UidKey    string `json:"uid_key"`
 }
 
 type SignInOutput struct {
-	token string
+	Token string `json:"token"`
 }
