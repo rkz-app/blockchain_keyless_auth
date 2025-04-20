@@ -7,4 +7,5 @@ type Repository interface {
 	CreateUserKey(ctx context.Context, publicKey, chain, address string, expiresAtSecs int64) (*UserKey, error)
 	GetUserKeys(ctx context.Context, address string) ([]*UserKey, error)
 	DeleteUserKey(ctx context.Context, userKeyId string) error
+	DeleteUserKeys(ctx context.Context, address string) error
 }
