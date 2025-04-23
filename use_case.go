@@ -9,14 +9,15 @@ import (
 import "github.com/dgrijalva/jwt-go"
 
 type UseCase struct {
-	repository   Repository
-	chain        Chain
-	sharedSecret string
-	jwtIssuer    string
+	repository        Repository
+	chain             Chain
+	allowMultipleKeys bool
+	sharedSecret      string
+	jwtIssuer         string
 }
 
-func NewUseCase(repository Repository, chain Chain, sharedSecret string, jwtIssuer string) *UseCase {
-	return &UseCase{repository: repository, chain: chain, sharedSecret: sharedSecret, jwtIssuer: jwtIssuer}
+func NewUseCase(repository Repository, chain Chain, sharedSecret string, jwtIssuer string, allowMultipleKeys bool) *UseCase {
+	return &UseCase{repository: repository, chain: chain, sharedSecret: sharedSecret, jwtIssuer: jwtIssuer, allowMultipleKeys: allowMultipleKeys}
 }
 
 func (uc *UseCase) SignIn(ctx context.Context, input *SignInput) (*SignInOutput, error) {
@@ -24,7 +25,14 @@ func (uc *UseCase) SignIn(ctx context.Context, input *SignInput) (*SignInOutput,
 	if err != nil {
 		return nil, err
 	}
+	if !uc.allowMultipleKeys {
+		err := uc.repository.DeleteUserKeys(ctx, *onChainAddress)
+		if err != nil {
+			return nil, err
+		}
+	}
 	userKey, err := uc.repository.CreateUserKey(ctx, input.PublicKey, uc.chain.GetName(), *onChainAddress, input.ExpiresAt)
+
 	if err != nil {
 		return nil, err
 	}
