@@ -2,8 +2,11 @@ package auth
 
 import (
 	"context"
+	"crypto/ed25519"
+	"encoding/hex"
 	"fmt"
 	"github.com/techpro-studio/gohttplib"
+	"golang.org/x/crypto/sha3"
 	"time"
 )
 import "github.com/dgrijalva/jwt-go"
@@ -31,17 +34,23 @@ func (uc *UseCase) SignIn(ctx context.Context, input *SignInput) (*SignInOutput,
 			return nil, err
 		}
 	}
-	userKey, err := uc.repository.CreateUserKey(ctx, input.PublicKey, uc.chain.GetName(), *onChainAddress, input.ExpiresAt)
+	return uc.SignInWithPublicKeyAddressExpires(ctx, input.PublicKey, *onChainAddress, &input.ExpiresAt)
+}
+
+func (uc *UseCase) SignInWithPublicKeyAddressExpires(ctx context.Context, publicKey string, address string, expiresAt *int64) (*SignInOutput, error) {
+	userKey, err := uc.repository.CreateUserKey(ctx, publicKey, uc.chain.GetName(), address, expiresAt)
 
 	if err != nil {
 		return nil, err
 	}
 	claims := jwt.StandardClaims{
-		ExpiresAt: input.ExpiresAt,
-		Issuer:    uc.jwtIssuer,
-		Audience:  userKey.ID,
-		Subject:   userKey.Address,
-		IssuedAt:  time.Now().Unix(),
+		Issuer:   uc.jwtIssuer,
+		Audience: userKey.ID,
+		Subject:  userKey.Address,
+		IssuedAt: time.Now().Unix(),
+	}
+	if expiresAt != nil {
+		claims.ExpiresAt = *expiresAt
 	}
 	tokenObj := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	token, err := tokenObj.SignedString([]byte(uc.sharedSecret))
@@ -91,4 +100,40 @@ func (uc *UseCase) RevokeUserKey(ctx context.Context, currentUserKey *UserKey, k
 		}
 	}
 	return uc.repository.DeleteUserKey(ctx, key)
+}
+
+func (uc *UseCase) VerifyAnonymousSignInput(ctx context.Context, input *AnonymousSignInput) (*string, error) {
+	publicKey, err := hex.DecodeString(input.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+	signature, err := hex.DecodeString(input.Signature)
+	if err != nil {
+		return nil, err
+	}
+	verified := ed25519.Verify(publicKey[2:], []byte(input.Timestamp), signature)
+	if !verified {
+		return nil, gohttplib.HTTP403("Signature verification failed")
+	}
+	address, err := uc.GenerateAddressFromPublicKey(input.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+	return &address, nil
+}
+
+func (uc *UseCase) GenerateAddressFromPublicKey(publicKey string) (string, error) {
+	publicKeyBytes, err := hex.DecodeString(publicKey)
+	if err != nil {
+		return "", err
+	}
+
+	payload := append(publicKeyBytes, byte(2))
+
+	hash := sha3.New256()
+	hash.Write(payload)
+	address := hash.Sum(nil)
+	addressHex := hex.EncodeToString(address)
+
+	return addressHex, nil
 }

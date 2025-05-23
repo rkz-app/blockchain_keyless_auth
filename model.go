@@ -7,12 +7,15 @@ type UserKey struct {
 	Address       string `json:"address"`
 	Chain         string `json:"chain"`
 	PublicKey     string `json:"public_key"`
-	ExpiresAtSecs int64  `json:"expires_at_secs"`
+	ExpiresAtSecs *int64 `json:"expires_at_secs,omitempty"`
 }
 
 func (u *UserKey) isExpired() bool {
+	if u.ExpiresAtSecs == nil {
+		return false
+	}
 	now := time.Now().Unix()
-	return u.ExpiresAtSecs < now
+	return *u.ExpiresAtSecs < now
 }
 
 type SignInput struct {
@@ -25,4 +28,11 @@ type SignInput struct {
 
 type SignInOutput struct {
 	Token string `json:"token"`
+}
+
+type AnonymousSignInput struct {
+	Timestamp string         `json:"timestamp"`
+	PublicKey string         `json:"epk"`
+	Signature string         `json:"signature"`
+	Remaining map[string]any `json:"remaining"`
 }

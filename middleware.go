@@ -49,7 +49,7 @@ func UserKeyMiddlewareFactory(useCase *UseCase, verifier RequestVerifier) gohttp
 			verifiedRequest := verifier.VerifyRequest(req, userKey)
 
 			if !verifiedRequest {
-				gohttplib.HTTP403("Signature incorrect").Write(w)
+				gohttplib.HTTP401().Write(w)
 				return
 			}
 

@@ -30,3 +30,29 @@ func ParseInput(r *http.Request) (*SignInput, error) {
 		UidKey:    body[kUidKey].(string),
 	}, nil
 }
+
+func ParseAnonymousInput(r *http.Request) (*AnonymousSignInput, error) {
+	const kPublicKey = "public_key"
+	const kTimestamp = "timestamp"
+	const kSignature = "signature"
+	body, err := validator.GetValidatedBody(r, validator.VMap{
+		kPublicKey: validator.RequiredStringValidators(kPublicKey),
+		kTimestamp: validator.RequiredStringValidators(kTimestamp),
+		kSignature: validator.RequiredStringValidators(kSignature),
+	})
+	if err != nil {
+		return nil, err
+	}
+	publickey := body[kPublicKey].(string)
+	timestamp := body[kTimestamp].(string)
+	signature := body[kSignature].(string)
+	delete(body, kPublicKey)
+	delete(body, kTimestamp)
+	delete(body, kSignature)
+	return &AnonymousSignInput{
+		PublicKey: publickey,
+		Signature: signature,
+		Timestamp: timestamp,
+		Remaining: body,
+	}, nil
+}
