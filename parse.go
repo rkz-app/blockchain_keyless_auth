@@ -50,8 +50,8 @@ func ParseAnonymousInput(r *http.Request) (*AnonymousSignInput, error) {
 	}
 	return &AnonymousSignInput{
 		PublicKey: body[kPublicKey].(string),
-		Signature: body[kTimestamp].(string),
-		Timestamp: body[kSignature].(string),
+		Signature: body[kSignature].(string),
+		Timestamp: body[kTimestamp].(string),
 		DeviceId:  body[kDeviceId].(string),
 	}, nil
 }

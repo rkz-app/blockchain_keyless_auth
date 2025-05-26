@@ -38,7 +38,7 @@ func (uc *UseCase) SignIn(ctx context.Context, input *SignInput) (*SignInOutput,
 }
 
 func (uc *UseCase) SignInWithPublicKeyAddressExpires(ctx context.Context, publicKey string, address string, deviceId string, expiresAt *int64) (*SignInOutput, error) {
-	userKey, err := uc.repository.CreateUserKey(ctx, publicKey, uc.chain.GetName(), address, expiresAt)
+	userKey, err := uc.repository.CreateUserKey(ctx, publicKey, uc.chain.GetName(), address, deviceId, expiresAt)
 
 	if err != nil {
 		return nil, err
