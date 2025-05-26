@@ -34,10 +34,10 @@ func (uc *UseCase) SignIn(ctx context.Context, input *SignInput) (*SignInOutput,
 			return nil, err
 		}
 	}
-	return uc.SignInWithPublicKeyAddressExpires(ctx, input.PublicKey, *onChainAddress, &input.ExpiresAt)
+	return uc.SignInWithPublicKeyAddressExpires(ctx, input.PublicKey, *onChainAddress, input.DeviceId, &input.ExpiresAt)
 }
 
-func (uc *UseCase) SignInWithPublicKeyAddressExpires(ctx context.Context, publicKey string, address string, expiresAt *int64) (*SignInOutput, error) {
+func (uc *UseCase) SignInWithPublicKeyAddressExpires(ctx context.Context, publicKey string, address string, deviceId string, expiresAt *int64) (*SignInOutput, error) {
 	userKey, err := uc.repository.CreateUserKey(ctx, publicKey, uc.chain.GetName(), address, expiresAt)
 
 	if err != nil {
@@ -45,7 +45,7 @@ func (uc *UseCase) SignInWithPublicKeyAddressExpires(ctx context.Context, public
 	}
 	claims := jwt.StandardClaims{
 		Issuer:   uc.jwtIssuer,
-		Audience: userKey.ID,
+		Audience: fmt.Sprintf("%s:%s", userKey.ID, deviceId),
 		Subject:  userKey.Address,
 		IssuedAt: time.Now().Unix(),
 	}
@@ -111,7 +111,7 @@ func (uc *UseCase) VerifyAnonymousSignInput(ctx context.Context, input *Anonymou
 	if err != nil {
 		return nil, err
 	}
-	verified := ed25519.Verify(publicKey[2:], []byte(input.Timestamp), signature)
+	verified := ed25519.Verify(publicKey[2:], []byte(input.Timestamp+input.DeviceId), signature)
 	if !verified {
 		return nil, gohttplib.HTTP403("Signature verification failed")
 	}
