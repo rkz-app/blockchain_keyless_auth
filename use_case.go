@@ -28,16 +28,17 @@ func (uc *UseCase) SignIn(ctx context.Context, input *SignInput) (*SignInOutput,
 	if err != nil {
 		return nil, err
 	}
-	if !uc.allowMultipleKeys {
-		err := uc.repository.DeleteUserKeys(ctx, *onChainAddress)
-		if err != nil {
-			return nil, err
-		}
-	}
 	return uc.SignInWithPublicKeyAddressExpires(ctx, input.PublicKey, *onChainAddress, input.DeviceId, &input.ExpiresAt)
 }
 
 func (uc *UseCase) SignInWithPublicKeyAddressExpires(ctx context.Context, publicKey string, address string, deviceId string, expiresAt *int64) (*SignInOutput, error) {
+	if !uc.allowMultipleKeys {
+		err := uc.repository.DeleteUserKeys(ctx, address)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	userKey, err := uc.repository.CreateUserKey(ctx, publicKey, uc.chain.GetName(), address, deviceId, expiresAt)
 
 	if err != nil {
