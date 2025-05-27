@@ -45,8 +45,8 @@ func (uc *UseCase) SignInWithPublicKeyAddressExpires(ctx context.Context, public
 	}
 	claims := jwt.StandardClaims{
 		Issuer:   uc.jwtIssuer,
-		Audience: fmt.Sprintf("%s:%s", userKey.ID, deviceId),
-		Subject:  userKey.Address,
+		Audience: userKey.ID,
+		Subject:  fmt.Sprintf("%s.%s", userKey.Address, userKey.DeviceId),
 		IssuedAt: time.Now().Unix(),
 	}
 	if expiresAt != nil {
