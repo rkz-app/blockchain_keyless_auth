@@ -2,9 +2,12 @@ package auth
 
 import (
 	"context"
-	"github.com/techpro-studio/gohttplib"
+	"errors"
 	"net/http"
 	"strings"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/techpro-studio/gohttplib"
 )
 
 const CurrentUserKeyContextKey = "current_user_key"
@@ -23,33 +26,48 @@ func GetTokenFromRequest(req *http.Request) string {
 	return tokenStr
 }
 
+func UnauthorizedError(code string) *gohttplib.ServerError {
+	return gohttplib.NewServerError(http.StatusUnauthorized, code, "UNAUTHORIZED", "Authorization", nil)
+}
+
+const UnauthorizedCodeEmptyToken = "UNAUTHORIZED.EMPTY_TOKEN"
+const UnauthorizedCodeInvalidToken = "UNAUTHORIZED.INVALID_TOKEN"
+const UnauthorizedCodeUserKeyNotExist = "UNAUTHORIZED.USER_KEY_NOT_EXIST"
+const UnauthorizedCodeUserKeyExpired = "UNAUTHORIZED.USER_KEY_EXPIRED"
+const UnauthorizedCodeRequestNotVerified = "UNAUTHORIZED.REQUEST_NOT_VERIFIED"
+
 func UserKeyMiddlewareFactory(useCase *UseCase, verifier RequestVerifier) gohttplib.Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			tokenStr := GetTokenFromRequest(req)
 			if tokenStr == "" {
-				gohttplib.HTTP401().Write(w)
+				UnauthorizedError(UnauthorizedCodeEmptyToken).Write(w)
 				return
 			}
+
 			userKey, err := useCase.GetUserKeyFromToken(req.Context(), tokenStr)
 
 			if err != nil {
-				gohttplib.SafeConvertToServerError(err).Write(w)
+				code := UnauthorizedCodeInvalidToken
+				if errors.Is(err, jwt.ErrTokenExpired) {
+					code = UnauthorizedCodeUserKeyExpired
+				}
+				UnauthorizedError(code).Write(w)
 				return
 			}
 			if userKey == nil {
-				gohttplib.HTTP401().Write(w)
+				UnauthorizedError(UnauthorizedCodeUserKeyNotExist).Write(w)
 				return
 			}
 			if userKey.isExpired() {
-				gohttplib.HTTP401().Write(w)
+				UnauthorizedError(UnauthorizedCodeUserKeyExpired).Write(w)
 				return
 			}
 
 			verifiedRequest := verifier.VerifyRequest(req, userKey)
 
 			if !verifiedRequest {
-				gohttplib.HTTP401().Write(w)
+				UnauthorizedError(UnauthorizedCodeRequestNotVerified).Write(w)
 				return
 			}
 
